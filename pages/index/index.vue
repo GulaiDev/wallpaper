@@ -1,16 +1,23 @@
 <template>
 	<view class="homeLayout pageBg">
+		<!-- #ifndef MP-TOUTIAO -->
 		<custom-nav-bar title="推荐"></custom-nav-bar>
+		<!-- #endif -->
+
+
+
 		<view class="banner">
 			<swiper circular indicator-dots indicator-color="rgba(255,255,255,0.5)" indicator-active-color="#fff" autoplay>
-				<swiper-item>
-					<image src="../../common/images/banner1.jpg" mode="aspectFill"></image>
-				</swiper-item>
-				<swiper-item>
-					<image src="../../common/images/banner2.jpg" mode="aspectFill"></image>
-				</swiper-item>
-				<swiper-item>
-					<image src="../../common/images/banner3.jpg" mode="aspectFill"></image>
+				<swiper-item v-for="item in bannerList" :key="item._id">
+
+					<navigator v-if="item.target == 'miniProgram'" :url="item.url" class="like" target="miniProgram"
+						:app-id="item.appid">
+						<image :src="item.picurl" mode="aspectFill"></image>
+					</navigator>
+
+					<navigator v-else :url="`/pages/classlist/classlist?${item.url}`" class="like">
+						<image :src="item.picurl" mode="aspectFill"></image>
+					</navigator>
 				</swiper-item>
 			</swiper>
 		</view>
@@ -22,9 +29,9 @@
 			</view>
 			<view class="center">
 				<swiper vertical autoplay interval="1500" duration="300" circular>
-					<swiper-item v-for="item in 4">
-						<navigator url="/pages/notice/detail">
-							文字内容文字内容文字内容文字内容文字内容文字内容
+					<swiper-item v-for="item in noticeList" :key="item._id">
+						<navigator :url="'/pages/notice/detail?id='+item._id">
+							{{item.title}}
 						</navigator>
 					</swiper-item>
 				</swiper>
@@ -48,8 +55,8 @@
 			</common-title>
 			<view class="content">
 				<scroll-view scroll-x>
-					<view class="box" v-for="item in 8" @click="goPreview">
-						<image src="../../common/images/preview_small.webp" mode="aspectFill"></image>
+					<view class="box" v-for="item in randomList" :key="item._id" @click="goPreview(item._id)">
+						<image :src="item.smallPicurl" mode="aspectFill"></image>
 					</view>
 				</scroll-view>
 			</view>
@@ -59,12 +66,12 @@
 			<common-title>
 				<template #name>专题精选</template>
 				<template #custom>
-					<navigator url="" class="more">More+</navigator>
+					<navigator url="/pages/classify/classify" open-type="reLaunch" class="more">More+</navigator>
 				</template>
 			</common-title>
 
 			<view class="content">
-				<theme-item v-for="item in 8"></theme-item>
+				<theme-item v-for="item in classifyList" :key="item._id" :item="item"></theme-item>
 				<theme-item :isMore="true"></theme-item>
 			</view>
 
@@ -76,11 +83,84 @@
 </template>
 
 <script setup>
-	const goPreview = () => {
+	import {
+		ref
+	} from 'vue';
+	import {
+		onShareAppMessage,
+		onShareTimeline
+	} from "@dcloudio/uni-app"
+	import {
+		apiGetBanner,
+		apiGetDayRandom,
+		apiGetNotice,
+		apiGetClassify
+	} from "@/api/apis.js"
+
+	const bannerList = ref([]);
+	const randomList = ref([]);
+	const noticeList = ref([]);
+	const classifyList = ref([]);
+
+	const getBanner = async () => {
+		let res = await apiGetBanner();
+		bannerList.value = res.data;
+	}
+
+	const getDayRandom = async () => {
+		let res = await apiGetDayRandom();
+		randomList.value = res.data
+	}
+
+	const getNotice = async () => {
+		let res = await apiGetNotice({
+			select: true
+		});
+		noticeList.value = res.data
+	}
+
+	const getClassify = async () => {
+		let res = await apiGetClassify({
+			select: true
+		});
+		classifyList.value = res.data
+		console.log(res);
+	}
+
+
+
+
+
+
+	//跳转到预览页面
+	const goPreview = (id) => {
+		uni.setStorageSync("storgClassList", randomList.value);
 		uni.navigateTo({
-			url: "/pages/preview/preview"
+			url: "/pages/preview/preview?id=" + id
 		})
 	}
+
+
+	//分享给好友
+	onShareAppMessage((e) => {
+		return {
+			title: "咸虾米壁纸，好看的手机壁纸",
+			path: "/pages/classify/classify"
+		}
+	})
+
+	//分享朋友圈
+	onShareTimeline(() => {
+		return {
+			title: "咸虾米壁纸，好看的手机壁纸"
+		}
+	})
+
+
+	getBanner();
+	getDayRandom();
+	getNotice();
+	getClassify();
 </script>
 
 <style lang="scss" scoped>
@@ -98,11 +178,17 @@
 					height: 100%;
 					padding: 0 30rpx;
 
-					image {
+					.like {
 						width: 100%;
 						height: 100%;
-						border-radius: 10rpx;
+
+						image {
+							width: 100%;
+							height: 100%;
+							border-radius: 10rpx;
+						}
 					}
+
 				}
 			}
 		}
